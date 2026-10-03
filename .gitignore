@@ -1,0 +1,7 @@
+.venv/
+.uvenv/
+__pycache__/
+other/
+
+data/
+video_script/
