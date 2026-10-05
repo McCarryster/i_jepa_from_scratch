@@ -36,6 +36,7 @@ class Predictor(nn.Module):
         depth: int = 4,
         num_heads: int = 4,
         mlp_ratio: float = 4.0,
+        output_dim: int | None = None,
     ) -> None:
         """Initializes the predictor.
 
@@ -47,8 +48,13 @@ class Predictor(nn.Module):
             depth: Number of transformer blocks.
             num_heads: Number of self-attention heads per block.
             mlp_ratio: Width of each block's MLP hidden layer, as a multiple of predictor_dim.
+            output_dim: Dimension to project predictions back up to. Defaults to
+                encoder_dim (I-JEPA's own latent-prediction case). Pass a different
+                value to reuse this same architecture as a pixel decoder (e.g.
+                channels * patch_size^2) instead of a latent predictor.
         """
         super().__init__()
+        output_dim = output_dim if output_dim is not None else encoder_dim
         self.context_proj = nn.Linear(encoder_dim, predictor_dim)
         self.mask_token = nn.Parameter(torch.zeros(1, 1, predictor_dim))
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, predictor_dim))
@@ -58,7 +64,7 @@ class Predictor(nn.Module):
             [TransformerBlock(predictor_dim, num_heads, mlp_ratio) for _ in range(depth)]
         )
         self.norm = nn.LayerNorm(predictor_dim)
-        self.out_proj = nn.Linear(predictor_dim, encoder_dim)
+        self.out_proj = nn.Linear(predictor_dim, output_dim)
 
     def forward(
         self,
@@ -81,7 +87,7 @@ class Predictor(nn.Module):
 
         Returns:
             Predicted embeddings at the target positions, shape
-            (batch, num_target, encoder_dim).
+            (batch, num_target, output_dim) (output_dim set in __init__).
         """
         batch_size = context_tokens.shape[0]
 
