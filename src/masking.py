@@ -7,8 +7,8 @@ import random
 # CONTEXT_BLOCK_ASPECT_RATIO = (1.0, 1.0)
 
 def sample_block(
-        patches_height: int,
-        patches_width: int,
+        grid_height: int,
+        grid_width: int,
         scale_range: tuple[float, float],
         aspect_ratio_range: tuple[float, float],
         rng: random.Random) -> tuple[int, int, int, int]:
@@ -35,19 +35,46 @@ def sample_block(
     aspect_ratio = rng.uniform(*aspect_ratio_range)
 
     # 2. Calculate total area
-    num_patches = patches_height*patches_width # 2*4 = 8
+    num_patches = grid_height*grid_width # 2*4 = 8
     area = num_patches * scale # 8*0.5 = 4
 
     # 3. Calculate new height and width
     new_height = int(round(math.sqrt(area * aspect_ratio))) # sqrt(4*1.5)=2.4
     new_width = int(round(math.sqrt(area / aspect_ratio))) # sqrt(4/1.5)=1.6
-    new_height = min(max(new_height, 1), patches_height)
-    new_width = min(max(new_width, 1), patches_width)
+    new_height = min(max(new_height, 1), grid_height)
+    new_width = min(max(new_width, 1), grid_width)
 
     # 4. Randomly pick placement
-    start_row = rng.randint(0, patches_height - new_height) # randint(0, 0)
-    start_column = rng.randint(0, patches_width - new_width) # randint(0, 2)
+    start_row = rng.randint(0, grid_height - new_height) # randint(0, 0)
+    start_column = rng.randint(0, grid_width - new_width) # randint(0, 2)
     # 1 2 3 4    1 2 3
     # 5 6 7 8 -> 5 6 7
 
     return start_row, start_column, new_height, new_width
+
+
+def block_to_indices(start_row: int,
+                     start_column: int,
+                     block_height: int,
+                     block_width: int,
+                     grid_width: int) -> set[int]:
+    """
+    Flattens a (start_row, start_column, block_height, block_width) rectangle into a set of row-major patch indices.
+
+    Args:
+        start_row: 1st row of the block.
+        start_column: 1st column of the block.
+        block_height: Block height, in patches.
+        block_width: Block width, in patches.
+        grid_width: Original grid width in patches.
+
+    Returns:
+        The set of flat patch indices covered by the block.
+    """
+
+    indices = set()
+    for r in range(start_row, start_row+block_height): # 1, 1+2
+        for c in range(start_column, start_column+block_width): # 1, 1+3
+            index = r * grid_width + c
+            indices.add(index)
+    return indices
